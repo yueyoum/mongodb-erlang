@@ -110,13 +110,17 @@ update_unknown(Pid) ->
 %%%===================================================================
 
 handle_call(get_pool, _From, State = #state{type = unknown}) ->
+  error_logger:info_msg("mongo ~p server get pool error", [self()]),
   {reply, {error, server_unknown}, State};
 handle_call(get_pool, _From, State = #state{ismaster = undefined}) ->
+  error_logger:info_msg("mongo ~p server get pool unknown", [self()]),
   {reply, {error, server_unknown}, State};
 handle_call(get_pool, _From, State = #state{pool = undefined}) ->
+  error_logger:info_msg("mongo ~p server init pool", [self()]),
   Pid = init_pool(State),
   {reply, Pid, State#state{pool = Pid}};
 handle_call(get_pool, _From, State = #state{pool = Pid}) ->
+  error_logger:info_msg("mongo ~p server get pool return", [self()]),
   {reply, Pid, State};
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.

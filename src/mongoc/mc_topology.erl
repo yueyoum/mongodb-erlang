@@ -131,6 +131,7 @@ get_pool(Topology) ->
   get_pool(Topology, []).
 
 get_pool(Topology, Options) ->
+  error_logger:info_msg("mongo ~p topology get state", [self()]),
   State = mc_topology:get_state(Topology),
 
   RPMode = mc_utils:get_value(rp_mode, Options, State#state.rp_mode),
@@ -142,14 +143,18 @@ get_pool(RPMode, RPTags, State) ->
   TO = State#state.topology_opts,
   ServerSelectionTimeoutMS = mc_utils:get_value(serverSelectionTimeoutMS, TO, 30000),
 
+  error_logger:info_msg("mongo ~p topology get pool", [self()]),
   Pid = spawn(?MODULE, get_pool, [self(), State, RPMode, RPTags]),
   receive
     {Pid, {error, Reason}, _} ->
+      error_logger:info_msg("mongo ~p topology get pool error", [self()]),
       {error, Reason};
     {Pid, Pool, Type} ->
+      error_logger:info_msg("mongo ~p topology get pool res ~p", [self(), Pool]),
       {ok, #{pool => Pool, server_type => Type, read_preference => #{mode => RPMode, tags => RPTags}}}
   after
     ServerSelectionTimeoutMS ->
+      error_logger:info_msg("mongo ~p topology get pool error", [self()]),
       exit(Pid, timeout),
       mc_topology:update_topology(State#state.self),
       {error, timeout}

@@ -48,9 +48,11 @@ init(Options) ->
   gen_server:enter_loop(?MODULE, [], #state{socket = Socket, conn_state = ConnState, net_module = NetModule}).
 
 handle_call(NewState = #conn_state{}, _, State = #state{conn_state = OldState}) ->  % update state, return old
+  error_logger:info_msg("mongo ~p mc_worker execution", [self()]),
   {reply, {ok, OldState}, State#state{conn_state = NewState}};
 handle_call(#ensure_index{collection = Coll, index_spec = IndexSpec}, _,
     State = #state{conn_state = ConnState, socket = Socket, net_module = NetModule}) -> % ensure index request with insert request
+  error_logger:info_msg("mongo ~p mc_worker execution", [self()]),
   Key = maps:get(<<"key">>, IndexSpec),
   Defaults = {<<"name">>, mc_worker_logic:gen_index_name(Key), <<"unique">>, false, <<"dropDups">>, false},
   Index = bson:update(<<"ns">>, mongo_protocol:dbcoll(ConnState#conn_state.database, Coll), bson:merge(IndexSpec, Defaults)),
@@ -64,6 +66,7 @@ handle_call(#ensure_index{collection = Coll, index_spec = IndexSpec}, _,
 handle_call(Request, From, State =
   #state{socket = Socket, conn_state = ConnState = #conn_state{}, request_storage = ReqStor, net_module = NetModule})
   when is_record(Request, insert); is_record(Request, update); is_record(Request, delete) ->  % write requests
+  error_logger:info_msg("mongo ~p mc_worker execution", [self()]),
   case ConnState#conn_state.write_mode of
     unsafe ->   %unsafe (just write)
       {ok, _} = mc_worker_logic:make_request(Socket, NetModule, ConnState#conn_state.database, Request),
@@ -86,6 +89,7 @@ handle_call(Request, From, State =
 handle_call(Request, From, State =
   #state{socket = Socket, request_storage = RequestStorage, conn_state = CS, net_module = NetModule}) % read requests
   when is_record(Request, 'query'); is_record(Request, getmore) ->
+  error_logger:info_msg("mongo ~p mc_worker execution", [self()]),
   UpdReq = case is_record(Request, 'query') of
              true ->
                case Request#'query'.sok_overriden of
@@ -102,6 +106,7 @@ handle_call(Request, From, State =
   {noreply, State#state{request_storage = URStorage}};
 handle_call(Request, _, State = #state{socket = Socket, conn_state = ConnState, net_module = NetModule})
   when is_record(Request, killcursor) ->
+  error_logger:info_msg("mongo ~p mc_worker execution", [self()]),
   {ok, _} = mc_worker_logic:make_request(Socket, NetModule, ConnState#conn_state.database, Request),
   {reply, ok, State};
 handle_call({stop, _}, _From, State) -> % stop request
