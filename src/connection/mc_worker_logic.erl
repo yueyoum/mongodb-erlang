@@ -13,7 +13,7 @@
 
 %% API
 -export([encode_requests/2, decode_responses/1, process_responses/2]).
--export([gen_index_name/1, make_request/4, get_resp_fun/2, update_dbcoll/2, collection/1]).
+-export([gen_index_name/1, make_request/4, get_resp_fun/3, update_dbcoll/2, collection/1]).
 
 encode_requests(Database, Request) when not is_list(Request) ->
   encode_requests(Database, [Request]);
@@ -29,11 +29,11 @@ encode_requests(Database, Request) ->
 decode_responses(Data) ->
   decode_responses(Data, []).
 
--spec get_resp_fun(#query{} | #getmore{} | #insert{} | #update{} | #delete{}, pid()) -> fun().
-get_resp_fun(Read, From) when is_record(Read, query); is_record(Read, getmore) ->
-  fun(Response) -> gen_server:reply(From, Response) end;
-get_resp_fun(Write, From) when is_record(Write, insert); is_record(Write, update); is_record(Write, delete) ->
-  process_write_response(From).
+-spec get_resp_fun(#query{} | #getmore{} | #insert{} | #update{} | #delete{}, pid(), fun()) -> fun().
+get_resp_fun(Read, From, Debug) when is_record(Read, query); is_record(Read, getmore) ->
+  fun(Response) -> gen_server:reply(From, Response), Debug() end;
+get_resp_fun(Write, From, Debug) when is_record(Write, insert); is_record(Write, update); is_record(Write, delete) ->
+  process_write_response(From, Debug).
 
 -spec process_responses(Responses :: list(), RequestStorage :: dict:dict()) -> UpdStorage :: dict:dict().
 process_responses(Responses, RequestStorage) ->
@@ -80,8 +80,8 @@ decode_responses(Data, Acc) ->
 
 %% @private
 %% Returns function for processing requests to From pid on write operations
--spec process_write_response(From :: pid()) -> fun().
-process_write_response(From) ->
+-spec process_write_response(From :: pid(), fun()) -> fun().
+process_write_response(From, Debug) ->
   fun(#reply{documents = [Doc]}) ->
     case maps:get(<<"err">>, Doc, undefined) of
       undefined -> gen_server:reply(From, ok);
@@ -90,5 +90,6 @@ process_write_response(From) ->
           10058 -> gen_server:reply(From, {error, {not_master, 10058}});
           Code -> gen_server:reply(From, {error, {write_failure, Code, String}})
         end
-    end
+    end,
+    Debug()
   end.

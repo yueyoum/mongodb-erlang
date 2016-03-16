@@ -83,9 +83,9 @@ handle_call(Request, From, State =
         },
       {ok, Id} = mc_worker_logic:make_request(
         Socket, NetModule, ConnState#conn_state.database, [Request, ConfirmWrite]), % ordinary write request
-      RespFun = mc_worker_logic:get_resp_fun(Request, From),
+      Debug = fun() -> error_logger:info_msg("mongo ~p mc_worker execute complete ~p", [self(), Request]) end,
+      RespFun = mc_worker_logic:get_resp_fun(Request, From, Debug),
       UReqStor = dict:store(Id, RespFun, ReqStor),  % save function, which will be called on response
-      error_logger:info_msg("mongo ~p mc_worker execute sent ~p", [self(), Request]),
       {noreply, State#state{request_storage = UReqStor}}
   end;
 handle_call(Request, From, State =
@@ -103,7 +103,8 @@ handle_call(Request, From, State =
              false -> Request
            end,
   {ok, Id} = mc_worker_logic:make_request(Socket, NetModule, CS#conn_state.database, UpdReq),
-  RespFun = mc_worker_logic:get_resp_fun(UpdReq, From),  % save function, which will be called on response
+  Debug = fun() -> error_logger:info_msg("mongo ~p mc_worker execute complete ~p", [self(), Request]) end,
+  RespFun = mc_worker_logic:get_resp_fun(UpdReq, From, Debug),  % save function, which will be called on response
   URStorage = dict:store(Id, RespFun, RequestStorage),
   error_logger:info_msg("mongo ~p mc_worker execute sent ~p", [self(), Request]),
   {noreply, State#state{request_storage = URStorage}};

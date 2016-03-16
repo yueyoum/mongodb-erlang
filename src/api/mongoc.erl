@@ -80,7 +80,6 @@ transaction(Topology, Transaction) ->
 transaction(Topology, Transaction, Timeout) when is_integer(Timeout); Timeout =:= infinity ->
   case mc_topology:get_pool(Topology, [{rp_mode, primary}]) of
     {ok, #{pool := C}} ->
-      error_logger:info_msg("mongo ~p poolboy transaction", [self()]),
       try poolboy:transaction(C, Transaction, Timeout)
       catch
         error:not_master ->
@@ -111,7 +110,6 @@ status(Topology) ->
 transaction(Topology, Transaction, Options, Timeout) ->
   case mc_topology:get_pool(Topology, Options) of
     {ok, Pool = #{pool := C}} ->
-      error_logger:info_msg("mongo ~p poolboy transaction", [self()]),
       try poolboy:transaction(C,
         fun(Worker) ->
           Transaction(Pool#{pool => Worker})
@@ -139,7 +137,6 @@ transaction_query(Topology, Transaction, Options) ->
 transaction_query(Topology, Transaction, Options, Timeout) ->
   case mc_topology:get_pool(Topology, Options) of
     {ok, Pool = #{pool := C}} ->
-      error_logger:info_msg("mongo ~p poolboy transaction", [self()]),
       poolboy:transaction(C, fun(Worker) -> Transaction(Pool#{pool => Worker}) end, Timeout);
     Error ->
       Error
